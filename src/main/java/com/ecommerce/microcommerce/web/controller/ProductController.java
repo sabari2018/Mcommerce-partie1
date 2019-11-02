@@ -1,7 +1,9 @@
 package com.ecommerce.microcommerce.web.controller;
 
 import com.ecommerce.microcommerce.dao.ProductDao;
+import com.ecommerce.microcommerce.web.exceptions.ProduitGratuitException;
 import com.ecommerce.microcommerce.model.Product;
+import com.ecommerce.microcommerce.model.ProductMarge;
 import com.ecommerce.microcommerce.web.exceptions.ProduitIntrouvableException;
 import com.fasterxml.jackson.databind.ser.FilterProvider;
 import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
@@ -16,6 +18,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import javax.validation.Valid;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -61,13 +64,12 @@ public class ProductController {
         return produit;
     }
 
-
-
-
     //ajouter un produit
     @PostMapping(value = "/Produits")
 
-    public ResponseEntity<Void> ajouterProduit(@Valid @RequestBody Product product) {
+    public ResponseEntity<Void> ajouterProduit(@Valid @RequestBody Product product) throws ProduitGratuitException {
+
+        if (product.getPrix() == 0) throw new ProduitGratuitException("Impossible d'ajouter un produit grattuit");
 
         Product productAdded =  productDao.save(product);
 
@@ -104,5 +106,27 @@ public class ProductController {
     }
 
 
+    //Calcule la marge de chaque produit (différence entre prix d‘achat et prix de vente)
+    @GetMapping(value = "/AdminProduits")
+    public List<ProductMarge> calculerMargeProduit(){
 
+       List<Product> productList = productDao.findAll();
+
+       List<ProductMarge> productMarges = new ArrayList<>();
+
+        for (Product product : productList) {
+            productMarges.add(new ProductMarge(
+                    product,
+                    product.getPrix() - product.getPrixAchat()
+            ));
+        }
+
+        return productMarges;
+    }
+
+    @GetMapping(value = "/Produits/ordre/alphabetique")
+    public  List<Product> trierProduitsParOrdreAlphabetique(){
+
+        return productDao.findAllByOrderByNomAsc();
+    }
 }
